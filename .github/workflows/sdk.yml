@@ -1,0 +1,143 @@
+name: SDK Integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      bindings_run_id:
+        description: Rust binding candidate workflow run ID
+        required: true
+      bindings_repository:
+        description: Rust GitHub repository owning the candidate run
+        required: true
+        default: fuookami/ospf-rust
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  sdk:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          repository: ${{ inputs.bindings_repository }}
+          run-id: ${{ inputs.bindings_run_id }}
+          github-token: ${{ github.token }}
+          name: ospf-binding-candidates
+          path: .cache/bindings
+      - uses: actions/download-artifact@v4
+        with:
+          repository: ${{ inputs.bindings_repository }}
+          run-id: ${{ inputs.bindings_run_id }}
+          github-token: ${{ github.token }}
+          name: ospf-host-candidate
+          path: .cache/host
+      - uses: actions/download-artifact@v4
+        with:
+          repository: ${{ inputs.bindings_repository }}
+          run-id: ${{ inputs.bindings_run_id }}
+          github-token: ${{ github.token }}
+          name: ospf-csp1d-report-evidence
+          path: .cache/csp1d-report-fixtures
+      - name: Configure CSP1D report evidence
+        shell: pwsh
+        run: |
+          "OSPF_CSP1D_FIXTURE_DIR=$((Resolve-Path .cache/csp1d-report-fixtures).Path)" | Out-File -Append $env:GITHUB_ENV
+      - uses: actions/download-artifact@v4
+        with:
+          repository: ${{ inputs.bindings_repository }}
+          run-id: ${{ inputs.bindings_run_id }}
+          github-token: ${{ github.token }}
+          name: ospf-bpp2d-report-evidence
+          path: .cache/bpp2d-report-fixtures
+      - name: Configure BPP2D report evidence
+        shell: pwsh
+        run: |
+          "OSPF_BPP2D_FIXTURE_DIR=$((Resolve-Path .cache/bpp2d-report-fixtures).Path)" | Out-File -Append $env:GITHUB_ENV
+      - uses: actions/download-artifact@v4
+        with:
+          repository: ${{ inputs.bindings_repository }}
+          run-id: ${{ inputs.bindings_run_id }}
+          github-token: ${{ github.token }}
+          name: ospf-csp2d-report-evidence
+          path: .cache/csp2d-report-fixtures
+      - name: Configure CSP2D report evidence
+        shell: pwsh
+        run: |
+          "OSPF_CSP2D_FIXTURE_DIR=$((Resolve-Path .cache/csp2d-report-fixtures).Path)" | Out-File -Append $env:GITHUB_ENV
+      - uses: actions/download-artifact@v4
+        with:
+          repository: ${{ inputs.bindings_repository }}
+          run-id: ${{ inputs.bindings_run_id }}
+          github-token: ${{ github.token }}
+          name: ospf-bpp3d-execution-evidence
+          path: .cache/bpp3d-execution-fixtures
+      - name: Configure BPP3D execution evidence
+        shell: pwsh
+        run: |
+          "OSPF_BPP3D_FIXTURE_DIR=$((Resolve-Path .cache/bpp3d-execution-fixtures).Path)" | Out-File -Append $env:GITHUB_ENV
+      - uses: actions/download-artifact@v4
+        with:
+          repository: ${{ inputs.bindings_repository }}
+          run-id: ${{ inputs.bindings_run_id }}
+          github-token: ${{ github.token }}
+          name: ospf-gantt-activity-evidence
+          path: .cache/gantt-activity-fixtures
+      - name: Configure Gantt activity evidence
+        shell: pwsh
+        run: |
+          "OSPF_GANTT_ACTIVITY_FIXTURE_DIR=$((Resolve-Path .cache/gantt-activity-fixtures).Path)" | Out-File -Append $env:GITHUB_ENV
+      - uses: actions/download-artifact@v4
+        with:
+          repository: ${{ inputs.bindings_repository }}
+          run-id: ${{ inputs.bindings_run_id }}
+          github-token: ${{ github.token }}
+          name: ospf-bpp-loading-evidence
+          path: .cache/bpp-loading-fixtures
+      - name: Configure shared BPP loading evidence
+        shell: pwsh
+        run: |
+          "OSPF_BPP_LOADING_FIXTURE_DIR=$((Resolve-Path .cache/bpp-loading-fixtures).Path)" | Out-File -Append $env:GITHUB_ENV
+      - name: Configure matching SCIP runtime and loopback host
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://github.com/scipopt/scipoptsuite-deploy/releases/download/v0.12.0/libscip-windows.zip' -OutFile .cache/scip.zip
+          Expand-Archive .cache/scip.zip .cache/scip
+          $runtime = (Resolve-Path .cache/scip/scip_install/bin).Path
+          $runtime | Out-File -Append $env:GITHUB_PATH
+          $env:PATH = "$runtime;$env:PATH"
+          $env:OSPF_TOKEN = 'ci-loopback-integration-token-00000001'
+          $env:OSPF_ORIGINS = 'http://127.0.0.1:4173'
+          $env:OSPF_BIND = '127.0.0.1:18787'
+          Start-Process -FilePath .cache/host/ospf-rust-host.exe -WindowStyle Hidden
+          'OSPF_E2E_URL=http://127.0.0.1:18787' | Out-File -Append $env:GITHUB_ENV
+          "OSPF_TOKEN=$env:OSPF_TOKEN" | Out-File -Append $env:GITHUB_ENV
+          for ($attempt = 0; $attempt -lt 60; $attempt++) {
+            try {
+              Invoke-RestMethod 'http://127.0.0.1:18787/ospf/v1/capabilities' -Headers @{ Authorization = "Bearer $env:OSPF_TOKEN" } | Out-Null
+              exit 0
+            } catch { Start-Sleep -Seconds 1 }
+          }
+          throw 'Native host did not become ready'
+      - name: Install exact binding candidate and development dependencies
+        shell: pwsh
+        run: npm install --no-save --package-lock=false ./.cache/bindings/ospf-wasm-bindings-0.1.0.tgz
+      - run: npm test
+      - name: Validate installed SDK and both native transports
+        shell: pwsh
+        run: npm run test:packages -- ./.cache/bindings/ospf-wasm-bindings-0.1.0.tgz ./.cache/bindings/ospf-node-bindings-0.1.0.tgz
+      - run: npx playwright install chromium
+      - run: npm run test:browser
+      - run: npm run test:browser:bundle
+      - name: Pack SDK candidate
+        shell: pwsh
+        run: npm pack --pack-destination .cache
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ospf-sdk-candidate
+          path: .cache/ospf-wasm-*.tgz

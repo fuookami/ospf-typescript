@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><title>OSPF browser integration</title></head><body><script type="module">
+import { initialize, Decimal, MetaModel } from '/dist/browser.js';
+import { checkCp } from './cp.js';
+import { checkIisReader } from './analysis-iis.js';
+import { checkGeometry2d } from './geometry2d.js';
+import { checkArrays } from './arrays.js';
+import { checkPacking } from './bpp1d.js';
+import { checkLoading, solveLoadingHttp, solveLoadingApplicationHttp, solveLoadingBendersHttp } from './bpp.js';
+import { checkPacking2d, solvePacking2dHttp } from './bpp2d.js';
+import { checkPacking3d, solvePacking3dHttp } from './bpp3d.js';
+import { checkGanttActivity } from './gantt.js';
+import { checkCutting, checkCuttingReport, checkCuttingExecution, solveCuttingHttp } from './csp1d.js';
+import { checkCutting2d, checkCutting2dReport, solveCutting2dHttp } from './csp2d.js';
+import { checkCancellation } from './cancellation.js';
+await initialize();
+window.checkPacking3d = async fixture => {
+    const main = checkPacking3d(fixture);
+    const worker = new Worker(new URL('./bpp3d-worker.js', import.meta.url), { type: 'module' });
+    try {
+        const fromWorker = await new Promise((resolve, reject) => {
+            worker.onerror = event => reject(new Error(event.message));
+            worker.onmessage = event => event.data.error ? reject(new Error(event.data.error)) : resolve(event.data);
+            worker.postMessage(fixture);
+        });
+        return { main, fromWorker };
+    } finally { worker.terminate(); }
+};
+window.solvePacking3dHttp = solvePacking3dHttp;
+window.checkGanttActivity = async fixture => {
+    const main = checkGanttActivity(fixture);
+    const worker = new Worker(new URL('./gantt-worker.js', import.meta.url), { type: 'module' });
+    try {
+        const fromWorker = await new Promise((resolve, reject) => {
+            worker.onerror = event => reject(new Error(event.message));
+            worker.onmessage = event => event.data.error ? reject(new Error(event.data.error)) : resolve(event.data);
+            worker.postMessage(fixture);
+        });
+        return { main, fromWorker };
+    } finally { worker.terminate(); }
+};
+window.checkCancellation = async () => {
+    const main = await checkCancellation();
+    const worker = new Worker(new URL('./cancellation-worker.js', import.meta.url), { type: 'module' });
+    try {
+        const fromWorker = await new Promise((resolve, reject) => {
+            worker.onerror = event => reject(new Error(event.message));
+            worker.onmessage = event => event.data.error ? reject(new Error(event.data.error)) : resolve(event.data);
+        });
+        return { main, fromWorker };
+    } finally { worker.terminate(); }
+};
+window.solveLoadingHttp = solveLoadingHttp;
+window.solveLoadingApplicationHttp = solveLoadingApplicationHttp;
+window.solveLoadingBendersHttp = solveLoadingBendersHttp;
+window.checkLoading = async fixture => {
+    const main = checkLoading(fixture);
+    const worker = new Worker(new URL('./bpp-worker.js', import.meta.url), { type: 'module' });
+    try {
+        const fromWorker = await new Promise((resolve, reject) => {
+            worker.onerror = event => reject(new Error(event.message));
+            worker.onmessage = event => event.data.error ? reject(new Error(event.data.error)) : resolve(event.data);
+            worker.postMessage(fixture ?? null);
+        });
+        return { main, fromWorker };
+    } finally { worker.terminate(); }
+};
+window.geometryResult = checkGeometry2d();
+window.solveCuttingHttp = solveCuttingHttp;
+window.solvePacking2dHttp = solvePacking2dHttp;
+window.solveCutting2dHttp = solveCutting2dHttp;
+window.checkCutting2dReport = async fixture => {
+    const main = checkCutting2dReport(fixture);
+    const worker = new Worker(new URL('./csp2d-worker.js', import.meta.url), { type: 'module' });
+    try {
+        const fromWorker = await new Promise((resolve, reject) => {
+            worker.onerror = event => reject(new Error(event.message));
+            worker.onmessage = event => event.data.error ? reject(new Error(event.data.error)) : resolve(event.data);
+            worker.postMessage(fixture);
+        });
+        return { main, fromWorker };
+    } finally { worker.terminate(); }
+};
+window.checkCutting2d = async () => {
+    const main = checkCutting2d();
+    const worker = new Worker(new URL('./csp2d-worker.js', import.meta.url), { type: 'module' });
+    try {
+        const fromWorker = await new Promise((resolve, reject) => {
+            worker.onerror = event => reject(new Error(event.message));
+            worker.onmessage = event => event.data.error ? reject(new Error(event.data.error)) : resolve(event.data);
+            worker.postMessage(null);
+        });
+        return { main, fromWorker };
+    } finally { worker.terminate(); }
+};
+window.checkPacking2d = async fixture => {
+    const main = checkPacking2d(fixture);
+    const worker = new Worker(new URL('./bpp2d-worker.js', import.meta.url), { type: 'module' });
+    try {
+        const fromWorker = await new Promise((resolve, reject) => {
+            worker.onerror = event => reject(new Error(event.message));
+            worker.onmessage = event => event.data.error ? reject(new Error(event.data.error)) : resolve(event.data);
+            worker.postMessage(fixture);
+        });
+        return { main, fromWorker };
+    } finally { worker.terminate(); }
+};
+window.checkCuttingReport = async fixture => {
+    const main = fixture.execution ? checkCuttingExecution(fixture) : checkCuttingReport(fixture);
+    const worker = new Worker(new URL('./csp1d-report-worker.js', import.meta.url), { type: 'module' });
+    try {
+        const fromWorker = await new Promise((resolve, reject) => {
+            worker.onerror = event => reject(new Error(event.message));
+            worker.onmessage = event => event.data.error ? reject(new Error(event.data.error)) : resolve(event.data);
+            worker.postMessage(fixture);
+        });
+        return { main, fromWorker };
+    } finally { worker.terminate(); }
+};
+const value = new Decimal('9007199254740993.1');
+const delta = new Decimal('0.2');
+const sum = value.add(delta);
+const model = new MetaModel('browser');
+const x = model.addVariable('x', { lowerBound: 0, upperBound: 1 });
+const expression = model.linearExpression([[x, 2]], 3);
+const token = x.token();
+const id = token.id();
+model.setVariableRange(x, { lowerBound: 0, upperBound: 2 });
+const symbol = model.addLinearSymbol('cost', expression);
+const reference = symbol.toLinear();
+const square = reference.mul(reference);
+const quadraticSymbol = model.addQuadraticSymbol('square', square);
+const quadraticReference = quadraticSymbol.toQuadratic();
+const relation = reference.le(5);
+model.addInequality(relation, 'capacity');
+model.setSolution(new Float64Array([1]));
+window.result = { decimal: sum.toString(), linear: expression.evaluate(new Float64Array([1])), quadratic: square.evaluate(new Float64Array([1])), quadraticSymbol: quadraticSymbol.evaluateSolution(), quadraticDependency: quadraticSymbol.dependencyIds()[0] === symbol.id(), symbol: symbol.evaluateSolution(), token: token.result(), rangeUpper: token.upperBound(), stableId: token.id() === id && typeof id === 'bigint', fingerprint: model.toLinearTriadModel().fingerprint };
+const quadraticRelation = square.le(25);
+model.addInequality(quadraticRelation, 'quadratic-capacity');
+window.result.quadraticModel = Boolean(model.toQuadraticTetradModel().fingerprint);
+window.result.cp = checkCp();
+window.result.iis = checkIisReader();
+window.arrayResult = checkArrays();
+window.bppResult = checkPacking().output;
+window.cspResult = checkCutting();
+const cuttingWorker = new Worker(new URL('./csp1d-worker.js', import.meta.url), { type: 'module' });
+cuttingWorker.onmessage = event => { window.cspWorkerResult = event.data; cuttingWorker.terminate(); };
+const packingWorker = new Worker(new URL('./bpp1d-worker.js', import.meta.url), { type: 'module' });
+packingWorker.onmessage = event => { window.bppWorkerResult = event.data; packingWorker.terminate(); };
+for (const object of [value, delta, sum, expression, square, reference, quadraticSymbol, quadraticReference, relation, quadraticRelation, token, symbol, model]) object.dispose();
+const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+worker.onmessage = event => {
+    if (event.data.geometry2d) { window.geometryWorkerResult = event.data.geometry2d; return; }
+    window.workerResult = event.data; worker.terminate();
+};
+</script></body></html>

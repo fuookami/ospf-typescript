@@ -1,0 +1,126 @@
+{
+    "name": "ospf-wasm",
+    "version": "0.1.0",
+    "description": "TypeScript SDK for OSPF Rust WASM, HTTP and Node native execution",
+    "type": "module",
+    "license": "MIT",
+    "engines": {
+        "node": ">=22"
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "README_ch.md",
+        "LICENSE"
+    ],
+    "types": "./dist/browser.d.ts",
+    "exports": {
+        ".": {
+            "browser": {
+                "types": "./dist/browser.d.ts",
+                "default": "./dist/browser.js"
+            },
+            "node": {
+                "types": "./dist/node.d.ts",
+                "default": "./dist/node.js"
+            },
+            "types": "./dist/browser.d.ts",
+            "default": "./dist/browser.js"
+        },
+        "./base": {
+            "types": "./dist/base.d.ts",
+            "default": "./dist/base.js"
+        },
+        "./math": {
+            "types": "./dist/math.d.ts",
+            "default": "./dist/math.js"
+        },
+        "./multiarray": {
+            "types": "./dist/multiarray.d.ts",
+            "default": "./dist/multiarray.js"
+        },
+        "./quantities": {
+            "types": "./dist/quantities.d.ts",
+            "default": "./dist/quantities.js"
+        },
+        "./core": {
+            "types": "./dist/core.d.ts",
+            "default": "./dist/core.js"
+        },
+        "./framework": {
+            "types": "./dist/framework.d.ts",
+            "default": "./dist/framework.js"
+        },
+        "./bpp": {
+            "types": "./dist/bpp.d.ts",
+            "default": "./dist/bpp.js"
+        },
+        "./bpp1d": {
+            "types": "./dist/bpp1d.d.ts",
+            "default": "./dist/bpp1d.js"
+        },
+        "./bpp2d": {
+            "types": "./dist/bpp2d.d.ts",
+            "default": "./dist/bpp2d.js"
+        },
+        "./bpp3d": {
+            "types": "./dist/bpp3d.d.ts",
+            "default": "./dist/bpp3d.js"
+        },
+        "./csp1d": {
+            "types": "./dist/csp1d.d.ts",
+            "default": "./dist/csp1d.js"
+        },
+        "./csp2d": {
+            "types": "./dist/csp2d.d.ts",
+            "default": "./dist/csp2d.js"
+        },
+        "./geometry2d": {
+            "types": "./dist/geometry2d.d.ts",
+            "default": "./dist/geometry2d.js"
+        },
+        "./native": {
+            "types": "./dist/native.d.ts",
+            "node": "./dist/native.js"
+        },
+        "./gantt": {
+            "types": "./dist/gantt.d.ts",
+            "import": "./dist/gantt.js"
+        }
+    },
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "build:browser": "npm run build && vite build",
+        "test": "npm run build && node --test --test-concurrency=1 test/*.test.mjs",
+        "test:browser": "playwright test",
+        "test:browser:bundle": "npm run build:browser && playwright test --config playwright.bundle.config.ts",
+        "test:packages": "node scripts/test-packages.mjs",
+        "prepack": "npm run build"
+    },
+    "dependencies": {
+        "ospf-wasm-bindings": "0.1.0"
+    },
+    "peerDependencies": {
+        "ospf-node-bindings": "0.1.0"
+    },
+    "peerDependenciesMeta": {
+        "ospf-node-bindings": {
+            "optional": true
+        }
+    },
+    "ospf": {
+        "protocolVersion": 1,
+        "wasmBindingsVersion": "0.1.0",
+        "nodeBindingsVersion": "0.1.0",
+        "verifiedHostVersions": [
+            "0.1.0"
+        ]
+    },
+    "devDependencies": {
+        "typescript": "5.9.3",
+        "typescript-min": "npm:typescript@5.2.2",
+        "@types/node": "22.18.12",
+        "@playwright/test": "1.64.1",
+        "vite": "8.3.5"
+    }
+}
